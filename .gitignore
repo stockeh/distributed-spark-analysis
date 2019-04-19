@@ -1,0 +1,4 @@
+# SBT Build Directories
+
+/project/
+/target/
