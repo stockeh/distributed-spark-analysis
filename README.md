@@ -22,3 +22,7 @@ alias hstopdfs="$HADOOP_HOME/sbin/stop-dfs.sh"
 alias sstartall=$SPARK_HOME/sbin/start-all.sh
 alias sstopall=$SPARK_HOME/sbin/stop-all.sh
 ```
+
+## Data Access
+
+The [Instacart dataset](https://www.instacart.com/datasets/grocery-shopping-2017) describes 3 Million Instacart orders, and can be described [here](https://gist.github.com/jeremystan/c3b39d947d9b88b3ccff3147dbcf6c6b).
