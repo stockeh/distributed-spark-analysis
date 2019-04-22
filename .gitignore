@@ -2,3 +2,6 @@
 
 /project/
 /target/
+.idea/
+build/
+.gradle/

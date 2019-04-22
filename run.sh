@@ -5,17 +5,17 @@ OUT_DIR="/out"
 
 function usage {
 cat << EOF
-    
+
     Usage: $0 -[b] -[j | e | k] -c
 
     -b : Submit Basic Job
 
     -j : Jasons HDFS
-    -e : Evans HDFS 
-    -k : Keegans HDFS  
+    -e : Evans HDFS
+    -k : Keegans HDFS
 
     -c : Compile with SBT
-    
+
 EOF
     exit 1
 }
@@ -26,7 +26,7 @@ function spark_runner {
     --deploy-mode cluster --class ${JOB_CLASS} target/scala-2.11/${JAR_FILE} ${INPUT} ${OUTPUT}
 }
 
-# Compile src 
+# Compile src
 if [[ $* = *-c* ]]; then
     sbt package
     LINES=`find . -name "*.scala" -print | xargs wc -l | grep "total" | awk '{$1=$1};1'`
@@ -56,16 +56,16 @@ esac
 
 # Various Jobs to Execute
 case "$1" in
-    
--b|--basic) 
+
+-b|--basic)
     JOB_NAME="basic"
     JOB_CLASS="Basic"
     INPUT="${CORE_HDFS}/local/tmp/sample_multiclass_classification_data.txt"
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
-  
+
 *) usage;
     ;;
-    
+
 esac
