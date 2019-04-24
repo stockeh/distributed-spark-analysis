@@ -3,5 +3,10 @@
 /project/
 /target/
 
+/data
+
+.idea
+*.iml
+
 /data/
 .idea
