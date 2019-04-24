@@ -6,9 +6,11 @@ OUT_DIR="/out"
 function usage {
 cat << EOF
 
-    Usage: $0 -[b] -[j | e | k] -c
+    Usage: $0 -[b | f] -[j | e | k] -c
 
     -b : Submit Basic Job
+    -f : First Order Job
+    -t : Top Food By Hour Job
 
     -j : Jasons HDFS
     -e : Evans HDFS
@@ -26,7 +28,14 @@ function spark_runner {
     --deploy-mode cluster --class ${JOB_CLASS} target/scala-2.11/${JAR_FILE} ${INPUT} ${OUTPUT}
 }
 
-# Compile src
+
+function yarn_runner {
+	$HADOOP_HOME/bin/hadoop fs -rm -R ${OUT_DIR}/${JOB_NAME} ||: \
+    && $SPARK_HOME/bin/spark-submit --master yarn \
+    --deploy-mode cluster --class ${JOB_CLASS} target/scala-2.11/${JAR_FILE} ${INPUT} ${OUTPUT}
+}
+
+# Compile src 
 if [[ $* = *-c* ]]; then
     sbt package
     LINES=`find . -name "*.scala" -print | xargs wc -l | grep "total" | awk '{$1=$1};1'`
@@ -39,10 +48,13 @@ case "$2" in
 -j|--jason)
     CORE_HDFS="hdfs://providence:30210"
     CORE_SPARK="spark://salem:30136"
+    INSTACART="local/instacart"
     ;;
 
 -e|--evan)
-    CORE_HDFS="hdfs://providence:30210"
+    CORE_HDFS="hdfs://juneau:4921"
+    CORE_SPARK="spark://lansing:25432"
+    INSTACART="cs455/food/instacart"
     ;;
 
 -k|--keegan)
@@ -65,6 +77,22 @@ case "$1" in
     spark_runner
     ;;
 
+-f|--firstorder)
+    JOB_NAME="firstorder"
+    JOB_CLASS="cs455.spark.basic.FirstOrder"
+    INPUT="${CORE_HDFS}/${INSTACART}/"
+    OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+    spark_runner
+    ;;
+
+-t|--topbyhour)
+	JOB_NAME="topfoodbyhour"
+	JOB_CLASS="cs455.spark.basic.MostTimeOfDay"
+	INPUT="${CORE_HDFS}/${INSTACART}/"
+    OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+    yarn_runner
+    ;;
+    
 *) usage;
     ;;
 

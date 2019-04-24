@@ -2,10 +2,16 @@
 
 /project/
 /target/
-.idea/
+
 build/
 .gradle/
-
 build.gradle
 build.sbt
 krun.sh
+
+/data
+
+.idea
+*.iml
+
+.idea
