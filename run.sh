@@ -42,7 +42,7 @@ case "$2" in
     ;;
 
 -e|--evan)
-    CORE_HDFS="hdfs://providence:30210"
+    CORE_HDFS="hdfs://juneau:4922"
     ;;
 
 -k|--keegan)

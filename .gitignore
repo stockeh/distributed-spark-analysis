@@ -2,3 +2,8 @@
 
 /project/
 /target/
+
+/data
+
+.idea
+*.iml

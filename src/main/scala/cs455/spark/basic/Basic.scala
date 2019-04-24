@@ -1,18 +1,25 @@
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.ml.classification.MultilayerPerceptronClassifier
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
-
 import org.apache.spark.sql.SparkSession
 
 object Basic {
 
   def main(args: Array[String]): Unit = {
+    //
+    Logger.getLogger("org").setLevel(Level.ERROR)
+    Logger.getLogger("akka").setLevel(Level.ERROR)
+
     val spark = SparkSession
       .builder
       .appName("MultilayerPerceptronClassifierExample")
+      .master("local")
       .getOrCreate()
     
     val input = args(0)
     val output = args(1)
+
+
     
     // Load the data stored in LIBSVM format as a DataFrame.
     val data = spark.read.format("libsvm")
@@ -56,4 +63,6 @@ object Basic {
 
     spark.stop()
   }
+
+
 }
