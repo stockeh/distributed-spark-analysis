@@ -6,9 +6,10 @@ OUT_DIR="/out"
 function usage {
 cat << EOF
     
-    Usage: $0 -[b] -[j | e | k] -c
+    Usage: $0 -[b | f] -[j | e | k] -c
 
     -b : Submit Basic Job
+    -f : First Order Job
 
     -j : Jasons HDFS
     -e : Evans HDFS 
@@ -65,6 +66,14 @@ case "$1" in
     spark_runner
     ;;
   
+-f|--firstorder)
+    JOB_NAME="firstorder"
+    JOB_CLASS="cs455.spark.basic.FirstOrder"
+    INPUT="${CORE_HDFS}/local/instacart/"
+    OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+    spark_runner
+    ;;
+    
 *) usage;
     ;;
     
