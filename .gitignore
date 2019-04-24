@@ -3,10 +3,15 @@
 /project/
 /target/
 
+build/
+.gradle/
+build.gradle
+build.sbt
+krun.sh
+
 /data
 
 .idea
 *.iml
 
-/data/
 .idea

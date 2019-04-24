@@ -5,7 +5,7 @@ OUT_DIR="/out"
 
 function usage {
 cat << EOF
-    
+
     Usage: $0 -[b | f] -[j | e | k] -c
 
     -b : Submit Basic Job
@@ -13,11 +13,11 @@ cat << EOF
     -t : Top Food By Hour Job
 
     -j : Jasons HDFS
-    -e : Evans HDFS 
-    -k : Keegans HDFS  
+    -e : Evans HDFS
+    -k : Keegans HDFS
 
     -c : Compile with SBT
-    
+
 EOF
     exit 1
 }
@@ -27,6 +27,7 @@ function spark_runner {
     && $SPARK_HOME/bin/spark-submit --master ${CORE_SPARK} \
     --deploy-mode cluster --class ${JOB_CLASS} target/scala-2.11/${JAR_FILE} ${INPUT} ${OUTPUT}
 }
+
 
 function yarn_runner {
 	$HADOOP_HOME/bin/hadoop fs -rm -R ${OUT_DIR}/${JOB_NAME} ||: \
@@ -67,15 +68,15 @@ esac
 
 # Various Jobs to Execute
 case "$1" in
-    
--b|--basic) 
+
+-b|--basic)
     JOB_NAME="basic"
     JOB_CLASS="Basic"
     INPUT="${CORE_HDFS}/local/tmp/sample_multiclass_classification_data.txt"
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
-  
+
 -f|--firstorder)
     JOB_NAME="firstorder"
     JOB_CLASS="cs455.spark.basic.FirstOrder"
@@ -94,5 +95,5 @@ case "$1" in
     
 *) usage;
     ;;
-    
+
 esac
