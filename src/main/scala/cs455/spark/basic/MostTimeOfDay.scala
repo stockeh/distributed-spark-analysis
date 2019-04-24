@@ -52,7 +52,7 @@ object MostTimeOfDay {
     //order dataframe into partitions for each hour of day and sort count in descending order for each hour
     //drop all but top value for each column
     joined = joined.withColumn("row", row_number().over(Window.partitionBy(col("order_hour_of_day")).orderBy(col("count").desc)))
-      .where(col("row") === 1).drop("row")
+      .where(col("row") <= 10).drop("row")
 
     //join with products in order to output product names
     val top_products = joined.join(products, Seq("product_id"), "inner").selectExpr("order_hour_of_day", "count", "product_name")
