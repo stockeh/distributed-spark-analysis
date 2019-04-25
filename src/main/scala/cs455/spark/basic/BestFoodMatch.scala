@@ -11,13 +11,14 @@ object BestFoodMatch {
     Logger.getLogger("org").setLevel(Level.ERROR)
     Logger.getLogger("akka").setLevel(Level.ERROR)
 
-    val directory = args(0)
-    val output = args(1)
-    val usda_products = directory + USDA_PRODUCTS
-    val insta_products = directory + INSTACART_PRODUCTS
-    var master = "yarn"
+    val directory_insta = args(0)
+    val directory_usda = args(1)
+    val output = args(2)
+    val usda_products = directory_usda + USDA_PRODUCTS
+    val insta_products = directory_insta + INSTACART_PRODUCTS
+    var master = args(3)
 
-    if (args.length > 2) master = "local"
+    //if (args.length > 3) master = "local"
 
     val spark = SparkSession
       .builder
@@ -39,23 +40,25 @@ class MatchTuple()
       val insta_product = row._1.get(1).toString.toUpperCase.split(" ")
       val usda_product = row._2.get(1).toString.toUpperCase.split(" ")
       val cart_val = cartesianFilter(insta_product, usda_product)
-      if (cart_val > .1) Tuple2( Array(row._1.get(0),row._1.get(1)), Array(row._2.get(0),row._2.get(1), cart_val))
-      else Tuple2(Array(),Array())
-    }).filter(row => row._1.nonEmpty)
-    cartesian_result.foreach(arr => {
-      println(arr._1.mkString(" "))
-      println(arr._2.mkString(" "))
+      if (cart_val > .1)
+        Tuple2(row._1.get(0).toString.toInt, Array(row._1.get(1),row._2.get(0),row._2.get(1), cart_val))
+      else
+        Tuple2(0,Array())
+    }).filter(row => row._1 != 0)
+
+    val reduced_cartesian = cartesian_result.reduceByKey((a, b) => {
+      if (a(3).toString.toDouble > b(3).toString.toDouble)
+        a
+      else
+        b
+    } ).map(row => {
+      (row._1, row._2(1), row._2(3))
     })
-    val reduced_cartesian = cartesian_result.reduceByKey((a, b) => if (a(2).toString.toDouble > b(2).toString.toDouble) a else b )
-    reduced_cartesian.foreach(arr => {
-      println(arr._1.mkString(" "))
-      println(arr._2.mkString(" "))
-    })
+
+    //reduced_cartesian.foreach(println)
+    reduced_cartesian.saveAsTextFile(output)
   }
 
-  def printWithSpace(): Unit = {
-
-  }
 
   def cartesianFilter(arr1 : Array[String], arr2 : Array[String]): Double ={
     return arr1.intersect(arr2).length.toDouble / arr1.union(arr2).length.toDouble
