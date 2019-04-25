@@ -8,8 +8,6 @@ cat << EOF
 
     Usage: $0 -[b | f | t | j] -[j | e | k] -c
 
-    Usage: $0 -[b | f] -[j | e | k] -c
-
     -b : Submit Basic Job
     -f : First Order Job
     -t : Top Food By Hour Job

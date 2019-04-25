@@ -1,8 +1,7 @@
 package cs455.spark.basic
 
-import cs455.spark.basic.MostTimeOfDay.findMostCommonByHour
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.{SparkSession}
 
 object BestFoodMatch {
   val USDA_PRODUCTS = "Products.csv"
@@ -17,8 +16,6 @@ object BestFoodMatch {
     val usda_products = directory_usda + USDA_PRODUCTS
     val insta_products = directory_insta + INSTACART_PRODUCTS
     var master = args(3)
-
-    //if (args.length > 3) master = "local"
 
     val spark = SparkSession
       .builder
@@ -56,7 +53,7 @@ class MatchTuple()
     })
 
     //reduced_cartesian.foreach(println)
-    reduced_cartesian.saveAsTextFile(output)
+    reduced_cartesian.coalesce(1).saveAsTextFile(output)
   }
 
 
