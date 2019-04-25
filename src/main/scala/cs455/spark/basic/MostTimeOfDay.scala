@@ -21,7 +21,7 @@ object MostTimeOfDay {
     val products = directory + PRODUCTS
     var master = "yarn"
 
-    if(args.length > 2) master = "local"
+    master = args(2)
 
     val spark = SparkSession
       .builder
