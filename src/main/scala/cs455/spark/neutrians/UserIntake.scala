@@ -8,8 +8,8 @@ import org.apache.spark.sql.SparkSession
   */
 object UserIntake {
 
-  val ORDER_PROD_SET = "order_train.csv"
-//  val ORDER_PROD_SET = "order_products__*.csv"
+//  val ORDER_PROD_SET = "order_train.csv"
+  val ORDER_PROD_SET = "order_products__*.csv"
   val ORDERS = "orders.csv"
 
   val NUTRIENTS = "Nutrients.csv"
@@ -18,7 +18,6 @@ object UserIntake {
     val spark = SparkSession
       .builder
       .appName("FirstOrder")
-      .master("local")
       .getOrCreate()
 
     val instacart = args(0)
@@ -41,11 +40,11 @@ object UserIntake {
     val users = spark.read.format( "csv" ).option( "header", "true" )
       .load( instacart + ORDERS ).selectExpr( "order_id", "user_id" )
 
-    val joint = order_set.join( users, "order_id" ).drop( "order_id" )
+    // Read in linked data
+    val linker = spark.read.format( "csv" ).option( "header", "true" )
+      .load( linked ).select( "product_id", "NDB_Number" )
 
-//    joint.show()
-
-    // Read in users data as a DataFrame
+    // Format nutrients on NDB_Number and sugars
     val nutrients = spark.read.format( "csv" ).option( "header", "true" )
       .load( usda + NUTRIENTS ).drop("Nutrient_Code").rdd.flatMap( row =>
     {
@@ -53,17 +52,17 @@ object UserIntake {
         List( ( row( 0 ).toString, row( 3 ).toString ) )
       else
         None
-    } ).toDF("NDB_Number", "sugar")
+    } ).toDF( "NDB_Number", "sugar" )
 
-    nutrients.show()
-//    val jointRDD = joint.rdd.map( row =>
-//    {
-//      (row(1), row(0))
-//    } ).groupByKey.mapValues( _.toList )
-//
+    val joint = order_set.join( users, "order_id" ).drop( "order_id" )
+      .join( linker, "product_id" ).join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" )
+
+    val jointRDD = joint.rdd.map( row =>
+    {
+      ( row( 0 ), row( 1 ).toString.toDouble )
+    } ).groupByKey.mapValues( _.toList )
+
 //    jointRDD.foreach(println)
-
-
-//    joint.rdd.coalesce(1).saveAsTextFile(output)
+    jointRDD.coalesce( 1 ).saveAsTextFile( output )
   }
 }
