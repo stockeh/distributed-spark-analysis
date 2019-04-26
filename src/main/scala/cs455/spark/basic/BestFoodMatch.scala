@@ -1,6 +1,7 @@
 package cs455.spark.basic
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.SparkSession
 
 object BestFoodMatch {
@@ -44,9 +45,9 @@ class MatchTuple()
     val usda = spark.read.format( "csv" ).option( "header", "true" ).load( usda_products )
       .selectExpr( "NDB_Number","long_name" ).rdd
     val instacart = spark.read.format( "csv" ).option( "header", "true" ).load( insta_products )
-      .selectExpr( "product_id","product_name" ).rdd
+      .selectExpr( "product_id","product_name" ).limit(5).rdd
 
-    var top = List( ( 0, 0, THRESHOLD ) )
+    var top = List( ( 0, ( 0, THRESHOLD ) ) )
 
     // output the values as ( insta-product-key , usda-product-key , top-jaccard-value )
     val cartesian_result = instacart.cartesian( usda ).flatMap( row =>
@@ -58,9 +59,9 @@ class MatchTuple()
       val id = row._1.get( 0 ).toString.toInt
 
       // store highest jaccard value for current ID
-      if ( id == top.head._1 && cart_val > top.head._3 )
+      if ( id == top.head._1 && cart_val > top.head._2._2 )
       {
-        top = List( ( id, row._2.get( 0 ).toString.toInt, cart_val ) )
+        top = List( ( id, ( row._2.get( 0 ).toString.toInt, cart_val ) ) )
       }
 
       val output = top
@@ -70,20 +71,27 @@ class MatchTuple()
       if ( id != top.head._1 )
       {
         // remove this and emit_output if we want every key to have the "best" match
-        if ( output.head._3 > THRESHOLD )
+        if ( output.head._2._2 > THRESHOLD )
           emit_output = true
 
-        top = List( ( id, row._2.get( 0 ).toString.toInt,
-          if ( cart_val > THRESHOLD ) cart_val else THRESHOLD ) )
+        top = List( ( id, ( row._2.get( 0 ).toString.toInt,
+          if ( cart_val > THRESHOLD ) cart_val else THRESHOLD ) ) )
       }
-
       if ( emit_output )
         output
       else
         None
     })
 
+    val reduced_cartesian = cartesian_result.reduceByKey( (a, b) => {
+      if (a._2.toString.toDouble > b._2.toString.toDouble)
+        a
+      else
+        b
+    } )
+
+
 //    cartesian_result.foreach( println )
-    cartesian_result.coalesce( 1 ).saveAsTextFile( output )
+    reduced_cartesian.saveAsTextFile( output )
   }
 }
