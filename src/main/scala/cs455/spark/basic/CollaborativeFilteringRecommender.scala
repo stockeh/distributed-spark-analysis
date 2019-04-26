@@ -40,25 +40,23 @@ object CollaborativeFilteringRecommender {
 
   def recommend(spark : SparkSession, str_orders : String, str_orders_products : String, str_products : String, output : String): Unit = {
 
-    var schema = StructType(Array(StructField("user_id", IntegerType, nullable = true), StructField("order_id", IntegerType, nullable = true)))
-    var schema2 = StructType(Array(StructField("product_id", IntegerType, nullable = true), StructField("order_id", IntegerType, nullable = true)))
+    var schema = StructType(Array(StructField("order_id", IntegerType, nullable = true), StructField("user_id", IntegerType, nullable = true)))
+    var schema2 = StructType(Array(StructField("order_id", IntegerType, nullable = true), StructField("product_id", IntegerType, nullable = true)))
 
     val orders = spark.read.format("csv").option("header", "true").schema(schema).load(str_orders)
     val order_products = spark.read.format("csv").option("header", "true").schema(schema2).load(str_orders_products)
     import spark.implicits._
     //load product data
-//    val products = spark.read.format("csv").option("header", "true").load(str_products)
 
     //join orders datasets
     val orders_set = orders.join(order_products, Seq("order_id"))
 
     val user_counts = orders_set.groupBy("user_id").count()
-      .orderBy($"count".desc).limit(100).withColumnRenamed("count", "total_purchased")
-
+      .orderBy($"count".desc).limit(2).withColumnRenamed("count", "total_purchased")
     val product_counts = orders_set.groupBy("user_id", "product_id").count()
-
     val users_products_counts = user_counts.join(product_counts, Seq("user_id"))
       .withColumn("rating", $"count" / $"total_purchased").drop("count", "total_purchased")
+//    users_products_counts.rdd.map(row => (row.getAs[Int]("user_id"), row.getAs[Int]("product_id"), row.getAs[Double]("rating"))).saveAsTextFile(output+"/rdd")
 //    users_products_counts.printSchema()
 //    users_products_counts.show(false)
     val als = new ALS()
@@ -67,27 +65,25 @@ object CollaborativeFilteringRecommender {
       .setUserCol("user_id")
       .setItemCol("product_id")
       .setRatingCol("rating")
-//      .setColdStartStrategy("drop")
+      .setColdStartStrategy("drop")
 
 
     var Array(training, test) = users_products_counts.randomSplit(Array(.8,.2))
-//    training = training.persist(StorageLevel.MEMORY_ONLY)
-//    test = test.persist(StorageLevel.MEMORY_ONLY)
     val model = als.fit(training)
     model.save(output + "/model/")
 
-    //model.setColdStartStrategy("drop")
-//    val predictions = model.transform(test)
-//
-//    val evaluator = new RegressionEvaluator()
-//      .setMetricName("rmse")
-//      .setLabelCol("rating")
-//      .setPredictionCol("prediction")
-//    val rmse = evaluator.evaluate(predictions)
-//    println("Root-mean-square-error = " + rmse)
-//
-//    val topProductRecsPerUser = model.recommendForAllUsers(10)
-//    topProductRecsPerUser.rdd.saveAsTextFile(output+"topProductsRecsPerUser/")
+    model.setColdStartStrategy("drop")
+    val predictions = model.transform(test)
+
+    val evaluator = new RegressionEvaluator()
+      .setMetricName("rmse")
+      .setLabelCol("rating")
+      .setPredictionCol("prediction")
+    val rmse = evaluator.evaluate(predictions)
+    println("Root-mean-square-error = " + rmse)
+
+    val topProductRecsPerUser = model.recommendForAllUsers(10)
+    topProductRecsPerUser.rdd.saveAsTextFile(output+"/topProductsRecsPerUser/")
 //
 //    val topUserRecsPerProduct = model.recommendForAllItems(10)
 //    topUserRecsPerProduct.rdd.saveAsTextFile(output+"topUserRecsPerProduct/")
