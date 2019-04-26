@@ -14,4 +14,4 @@ krun.sh
 .idea
 *.iml
 
-.idea
+/notebook/.ipynb_checkpoints
