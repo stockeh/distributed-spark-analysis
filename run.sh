@@ -26,14 +26,8 @@ EOF
 function spark_runner {
     $HADOOP_HOME/bin/hadoop fs -rm -R ${OUT_DIR}/${JOB_NAME} ||: \
     && $SPARK_HOME/bin/spark-submit --master ${CORE_SPARK} \
-    --deploy-mode cluster --class ${JOB_CLASS} target/scala-2.11/${JAR_FILE} ${INPUT} ${SECOND_INPUT} ${OUTPUT} ${CORE_SPARK}
-}
-
-
-function yarn_runner {
-	$HADOOP_HOME/bin/hadoop fs -rm -R ${OUT_DIR}/${JOB_NAME} ||: \
-    && $SPARK_HOME/bin/spark-submit --master yarn \
-    --deploy-mode cluster --class ${JOB_CLASS} target/scala-2.11/${JAR_FILE} ${INPUT} ${OUTPUT}
+    --deploy-mode cluster --class ${JOB_CLASS} target/scala-2.11/${JAR_FILE} \
+    ${INPUT} ${SECOND_INPUT} ${OUTPUT} ${CORE_SPARK}
 }
 
 # Compile src 
@@ -89,18 +83,18 @@ case "$1" in
     ;;
 
 -t|--topbyhour)
-	JOB_NAME="topfoodbyhour"
-	JOB_CLASS="cs455.spark.basic.MostTimeOfDay"
-	INPUT="${CORE_HDFS}/${INSTACART}/"
+	  JOB_NAME="topfoodbyhour"
+	  JOB_CLASS="cs455.spark.basic.MostTimeOfDay"
+	  INPUT="${CORE_HDFS}/${INSTACART}/"
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
 
 -j|--joinedproducts)
-	JOB_NAME="joinedproducts"
-	JOB_CLASS="cs455.spark.basic.BestFoodMatch"
-	INPUT="${CORE_HDFS}/${INSTACART}/"
-	SECOND_INPUT="${CORE_HDFS}/${USDA}/"
+	  JOB_NAME="joinedproducts"
+	  JOB_CLASS="cs455.spark.basic.BestFoodMatch"
+	  INPUT="${CORE_HDFS}/${INSTACART}/"
+	  SECOND_INPUT="${CORE_HDFS}/${USDA}/"
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
