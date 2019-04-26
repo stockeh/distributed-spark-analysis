@@ -12,6 +12,8 @@ object UserIntake {
 //  val ORDER_PROD_SET = "order_products__*.csv"
   val ORDERS = "orders.csv"
 
+  val NUTRIENTS = "Nutrients.csv"
+
   def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
@@ -29,6 +31,7 @@ object UserIntake {
 
   def driver(spark : SparkSession, instacart: String,
              usda: String, linked: String, output: String): Unit = {
+    import spark.implicits._
 
     // Read in order data as DataFrame
     val order_set = spark.read.format( "csv" ).option( "header", "true" )
@@ -38,15 +41,26 @@ object UserIntake {
     val users = spark.read.format( "csv" ).option( "header", "true" )
       .load( instacart + ORDERS ).selectExpr( "order_id", "user_id" )
 
-    val joint = order_set.join( users, "order_id" ).drop("order_id")
+    val joint = order_set.join( users, "order_id" ).drop( "order_id" )
 
-    joint.show()
+//    joint.show()
 
-    val jointRDD = joint.rdd.map( row =>
+    // Read in users data as a DataFrame
+    val nutrients = spark.read.format( "csv" ).option( "header", "true" )
+      .load( usda + NUTRIENTS ).drop("Nutrient_Code").rdd.flatMap( row =>
     {
-      (row(2), row(1))
-    }).groupByKey.mapValues(_.toList)
+      if ( row( 1 ).equals("Sugars, total") )
+        List( ( row( 0 ).toString, row( 3 ).toString ) )
+      else
+        None
+    } ).toDF("NDB_Number", "sugar")
 
+    nutrients.show()
+//    val jointRDD = joint.rdd.map( row =>
+//    {
+//      (row(1), row(0))
+//    } ).groupByKey.mapValues( _.toList )
+//
 //    jointRDD.foreach(println)
 
 
