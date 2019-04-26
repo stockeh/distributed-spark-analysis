@@ -6,12 +6,13 @@ OUT_DIR="/out"
 function usage {
 cat << EOF
 
-    Usage: $0 -[b | f | t | j] -[j | e | k] -c
+    Usage: $0 -[b | f | t | j | cfr] -[j | e | k] -c
 
     -b : Submit Basic Job
     -f : First Order Job
     -t : Top Food By Hour Job
     -j : Join Food Job
+    -cfr : Collaborative Filtering Job
 
     -j : Jasons HDFS
     -e : Evans HDFS
@@ -83,21 +84,29 @@ case "$1" in
     ;;
 
 -t|--topbyhour)
-	  JOB_NAME="topfoodbyhour"
-	  JOB_CLASS="cs455.spark.basic.MostTimeOfDay"
-	  INPUT="${CORE_HDFS}/${INSTACART}/"
-    OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
-    spark_runner
-    ;;
+	JOB_NAME="topfoodbyhour"
+	JOB_CLASS="cs455.spark.basic.MostTimeOfDay"
+	INPUT="${CORE_HDFS}/${INSTACART}/"
+	OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+	spark_runner
+	;;
 
 -j|--joinedproducts)
-	  JOB_NAME="joinedproducts"
-	  JOB_CLASS="cs455.spark.basic.BestFoodMatch"
-	  INPUT="${CORE_HDFS}/${INSTACART}/"
-	  SECOND_INPUT="${CORE_HDFS}/${USDA}/"
-    OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
-    spark_runner
-    ;;
+		JOB_NAME="joinedproducts"
+		JOB_CLASS="cs455.spark.basic.BestFoodMatch"
+		INPUT="${CORE_HDFS}/${INSTACART}/"
+		SECOND_INPUT="${CORE_HDFS}/${USDA}/"
+		OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+		spark_runner
+		;;
+
+-cfr|--collabfilter)
+	JOB_NAME="collaborativefilter"
+		JOB_CLASS="cs455.spark.basic.CollaborativeFilteringRecommender"
+		INPUT="${CORE_HDFS}/${INSTACART}/"
+		OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+		spark_runner
+		;;
     
 *) usage;
     ;;
