@@ -25,7 +25,7 @@ EOF
 function spark_runner {
     $HADOOP_HOME/bin/hadoop fs -rm -R ${OUT_DIR}/${JOB_NAME} ||: \
     && $SPARK_HOME/bin/spark-submit --master ${CORE_SPARK} \
-    --deploy-mode cluster --class ${JOB_CLASS} ${JAR_FILE} ${INPUT} ${SECOND_INPUT} ${THIRD_INPUT} ${OUTPUT} ${CORE_SPARK}
+    --class ${JOB_CLASS} ${JAR_FILE} ${INPUT} ${SECOND_INPUT} ${THIRD_INPUT} ${OUTPUT} ${CORE_SPARK}
 }
 
 # Compile src 
@@ -57,7 +57,7 @@ case "$2" in
 -k|--keegan)
     JAR_FILE="build/libs/distributed-spark-analysis.jar"
     CORE_HDFS="hdfs://austin:5678"
-    CORE_SPARK="spark://lansing:25432"
+    CORE_SPARK="spark://washington-dc:7077"
     INSTACART="local/instacart"
     USDA="local/bfpd"
     LINK="local/insta-bfpd.csv"
