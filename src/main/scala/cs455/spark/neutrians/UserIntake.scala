@@ -2,6 +2,8 @@ package cs455.spark.neutrians
 
 import org.apache.spark.sql.SparkSession
 
+import cs455.spark.util.Util
+
 /**
   * Get the average amount of sugars in 100 gram measures on
   * all purchased products per user.
@@ -88,10 +90,11 @@ object UserIntake {
 //        x._1 + "," + x._2.sum / x._2.length
 //      } ).coalesce( 1 ).saveAsTextFile( output )
 
-    val products = spark.read.format( "csv" ).option( "header", "true" ).load( instacart + PRODUCTS )
-      .select( "product_id", "aisle_id" )
+    val products = Util.filterByFoodAisles(spark,
+      spark.read.format( "csv" ).option( "header", "true" ).load( instacart + PRODUCTS )
+      .select( "product_id", "aisle_id" ), instacart).show(false)
 
-    products.join( linker, "product_id" )
-      .join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" ).show(false)
+//    products.join( linker, "product_id" )
+//      .join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" ).show(false)
   }
 }
