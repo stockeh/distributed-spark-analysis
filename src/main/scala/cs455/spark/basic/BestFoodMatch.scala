@@ -44,9 +44,9 @@ class MatchTuple()
     val usda = spark.read.format( "csv" ).option( "header", "true" ).load( usda_products )
       .selectExpr( "NDB_Number","long_name" ).rdd
     val instacart = spark.read.format( "csv" ).option( "header", "true" ).load( insta_products )
-      .selectExpr( "product_id","product_name" ).rdd
+      .selectExpr( "product_id","product_name" ).limit(5).rdd
 
-    var top = List( ( 0, (0, THRESHOLD ) ) )
+    var top = List( ( 0, ( 0, THRESHOLD ) ) )
 
     // output the values as ( insta-product-key , usda-product-key , top-jaccard-value )
     var cartesian_result = instacart.cartesian( usda ).flatMap( row =>
@@ -59,7 +59,7 @@ class MatchTuple()
       // store highest jaccard value for current ID
       if ( id == top.head._1 && cart_val > top.head._2._2 )
       {
-        top = List( (id, (row._2.get( 0 ).toString.toInt, cart_val ) ) )
+        top = List( ( id, ( row._2.get( 0 ).toString.toInt, cart_val ) ) )
       }
 
       val output = top
@@ -72,10 +72,9 @@ class MatchTuple()
         if ( output.head._2._2 > THRESHOLD )
           emit_output = true
 
-        top = List( ( id, (row._2.get( 0 ).toString.toInt,
+        top = List( ( id, ( row._2.get( 0 ).toString.toInt,
           if ( cart_val > THRESHOLD ) cart_val else THRESHOLD ) ) )
       }
-
       if ( emit_output )
         output
       else
@@ -83,7 +82,13 @@ class MatchTuple()
     })
     cartesian_result = cartesian_result.reduceByKey((x,y) => if(x._2 > y._2) x else y)
 
-//    cartesian_result.foreach( println )
-    cartesian_result.coalesce( 1 ).reduceByKey((x,y) => if(x._2 > y._2) x else y).saveAsTextFile( output )
+    val reduced_cartesian = cartesian_result.reduceByKey( (a, b) => {
+      if (a._2.toString.toDouble > b._2.toString.toDouble)
+        a
+      else
+        b
+    } )
+    
+    reduced_cartesian.saveAsTextFile( output )
   }
 }
