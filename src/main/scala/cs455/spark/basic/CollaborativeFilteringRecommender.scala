@@ -3,14 +3,10 @@ package cs455.spark.basic
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.recommendation.ALS
-import org.apache.spark.ml.recommendation.ALS.Rating
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
-import org.apache.spark.storage.StorageLevel
 import org.apache.spark.sql.functions.explode
-
-import scala.collection.{Map, mutable}
-import scala.collection.mutable.ArrayBuffer
+import org.apache.spark.sql.functions.round
 
 //case class UserProduct(user_id : Int, product_id : Int, rating : Int)
 object CollaborativeFilteringRecommender {
@@ -52,20 +48,31 @@ object CollaborativeFilteringRecommender {
     //join orders datasets
     val orders_set = orders.join(order_products, Seq("order_id"))
 
+    val num_users = 2000
+    val max_iter = 6
+    val reg_param =   1.0
+    val rank = 50
+    val alpha = 1
+
+
     val user_counts = orders_set.groupBy( "user_id" ).count()
-      .orderBy( $"count".desc ).limit( 2000 ).withColumnRenamed( "count", "total_purchased" )
+      .orderBy( $"count".desc ).limit( num_users ).withColumnRenamed( "count", "total_purchased" )
     val product_counts = orders_set.groupBy( "user_id", "product_id" ).count()
     val users_products_counts = user_counts.join(product_counts, Seq( "user_id" ) )
-      .withColumn( "rating", $"count" / $"total_purchased" ).drop( "count", "total_purchased" )
+      .withColumn( "rating",$"count").drop( "count", "total_purchased" )
 
     val als = new ALS()
-      .setMaxIter( 6 )
-      .setRegParam( 0.0005 )
-      .setRank( 50 )
+      .setMaxIter( max_iter )
+      .setRegParam( reg_param )
+      .setRank( rank )
+        .setAlpha(alpha)
       .setUserCol( "user_id" )
       .setItemCol( "product_id" )
       .setRatingCol( "rating" )
+      .setImplicitPrefs(true)
       .setColdStartStrategy( "drop" )
+
+    printf("Total Products: %d\nMax Iterations: %d\nReg Param: %f\nRank: %d\nAlpha: %d\n", num_users, max_iter, reg_param, rank, alpha)
 
     var Array(training, test) = users_products_counts.randomSplit( Array( 0.80, 0.20 ) )
 
@@ -108,7 +115,7 @@ object CollaborativeFilteringRecommender {
       .rdd.map( row =>
         {
           ( row.getAs[Int]( "user_id" ),
-          ( row.getAs[Int]( "product_id" ), row.getAs[String]( "product_name" ), row.getAs[Double]( "rating" ) ) )
+          ( row.getAs[Int]( "product_id" ), row.getAs[String]( "product_name" ), row.getAs[Int]( "rating" ) ) )
         } ).coalesce( 1 ).groupByKey.mapValues( x =>
           {
             x.toList.sortWith( _._3 > _ ._3 ).slice( 0, 10 )

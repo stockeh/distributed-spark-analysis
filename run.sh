@@ -52,7 +52,9 @@ case "$2" in
 -e|--evan)
     JAR_FILE="target/scala-2.11/cs455-spark_2.11-1.0.jar"
     CORE_HDFS="hdfs://juneau:4921"
-    CORE_SPARK="spark://lansing:25432"
+    #CORE_SPARK="spark://lansing:25432"
+    #CORE_SPARK="spark://salem:30136"
+    CORE_SPARK="yarn"
     INSTACART="cs455/food/instacart"
     USDA="cs455/food/usda"
     ;;
