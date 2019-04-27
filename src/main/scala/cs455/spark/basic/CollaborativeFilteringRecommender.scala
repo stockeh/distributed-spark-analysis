@@ -94,9 +94,14 @@ object CollaborativeFilteringRecommender {
 
     val recommendation = topExploded.join( products, Seq( "product_id" ), "inner" ).rdd
 
-    recommendation.map( row => ( row.getAs[Int]( "user_id" ), row.getAs[Int]( "product_id" ),
-      row.getAs[Float]( "rating" ), row.getAs[String]( "product_name" ) ) )
-      .coalesce( 1 ).sortBy( x => ( x._1, -x._3 ) )
+    recommendation.map( row =>
+      {
+        ( row.getAs[Int]( "user_id" ),
+        ( row.getAs[Int]( "product_id" ), row.getAs[String]( "product_name" ), row.getAs[Float]( "rating" ) ) )
+      } ).coalesce( 1 ).groupByKey.mapValues( x =>
+        {
+          x.toList.sortWith( _._3 > _ ._3 ).slice( 0, 10 )
+        } )
       .saveAsTextFile( output + "/topProductsRecsPerUser" )
 
     users_products_counts.join( products, Seq( "product_id" ), "inner" )
