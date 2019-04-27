@@ -44,7 +44,6 @@ object SimilarUsers {
 
     val user_vector_df = user_desc_vector.map(row => (row._1, Vectors.sparse(49689, row._2))).toDF("user_id", "keys")
 
-
     val mh = new MinHashLSH()
       .setNumHashTables(20)
       .setInputCol("keys")
@@ -52,21 +51,28 @@ object SimilarUsers {
 
     val model = mh.fit(user_vector_df)
 
-    val splitDf = user_vector_df.randomSplit(Array(.2, .005))
+    val splitDf = user_vector_df.randomSplit(Array(.1, .01))
     val (usersA, usersB) = (splitDf(0), splitDf(1))
 
     val transformedA = model.transform(usersA).cache()
     val transformedB = model.transform(usersB).cache()
 
-    // println(user_vector_df.take(1)(0))
-    val key = Vectors.sparse(49689, Array(5077,11323,14303,20082,22108,46522),Array(1.0,1.0,1.0,1.0,1.0,1.0))
-    model.approxNearestNeighbors(transformedA, key, 7).show()
-    model.approxNearestNeighbors(transformedB, key, 7).show()
+    transformedA.show()
+    transformedB.show()
 
+//    // println(user_vector_df.take(1)(0))
+//    val key = Vectors.sparse(49689, Array(5077,11323,14303,20082,22108,46522),Array(1.0,1.0,1.0,1.0,1.0,1.0))
+//    model.approxNearestNeighbors(transformedA, key, 7).show()
+//    model.approxNearestNeighbors(transformedB, key, 7).show()
+//
 //    val key2 = Vectors.sparse(49689, Array(4210,5077,22108,46522),Array(1.0,1.0,1.0,1.0))
 //    model.approxNearestNeighbors(transformedA, key2, 7)
 
-    model.approxSimilarityJoin(transformedA, transformedB, 0.4).rdd.coalesce(1).saveAsTextFile(output)
+//    model.approxSimilarityJoin(transformedA, transformedB, 0.4).rdd.coalesce(1).saveAsTextFile(output)
+
+    val simJoinedRdd = model.approxSimilarityJoin(transformedA, transformedB, 1).rdd;
+
+    simJoinedRdd.take(10).foreach(println)
 
   }
 
