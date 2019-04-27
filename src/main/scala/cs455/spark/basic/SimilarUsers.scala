@@ -6,7 +6,7 @@ import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.feature._
 
 
-class SimilarUsers {
+object SimilarUsers {
 
   def main(args: Array[String]): Unit = {
 
@@ -60,13 +60,13 @@ class SimilarUsers {
 
     // println(user_vector_df.take(1)(0))
     val key = Vectors.sparse(49689, Array(5077,11323,14303,20082,22108,46522),Array(1.0,1.0,1.0,1.0,1.0,1.0))
-    model.approxNearestNeighbors(transformedA, key, 7)
-    model.approxNearestNeighbors(transformedB, key, 7)
+    model.approxNearestNeighbors(transformedA, key, 7).show()
+    model.approxNearestNeighbors(transformedB, key, 7).show()
 
-    val key2 = Vectors.sparse(49689, Array(4210,5077,22108,46522),Array(1.0,1.0,1.0,1.0))
-    model.approxNearestNeighbors(transformedA, key2, 7)
+//    val key2 = Vectors.sparse(49689, Array(4210,5077,22108,46522),Array(1.0,1.0,1.0,1.0))
+//    model.approxNearestNeighbors(transformedA, key2, 7)
 
-    model.approxSimilarityJoin(transformedA, transformedB, 0.4).coalesce()
+    model.approxSimilarityJoin(transformedA, transformedB, 0.4).rdd.coalesce(1).saveAsTextFile(output)
 
   }
 
