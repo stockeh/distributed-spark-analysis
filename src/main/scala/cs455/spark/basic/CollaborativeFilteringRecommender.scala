@@ -67,24 +67,32 @@ object CollaborativeFilteringRecommender {
     val products = setupProducts(spark, str_products)
     val users_products_counts = setupUserProductCounts(spark, str_orders, str_orders_products, num_users)
 
-    val max_iter = Array(10)
+    val max_iter = Array(1)
     val reg_param = Array(1.0)
-    val rank = Array(75)
+    val rank = Array(1)
     val alpha = Array(1)
     val seed = 12345L
     originalProducts(spark, users_products_counts, products, output+"/topOriginalProductsPerUser/"+num_users)
 
+    var best_params = (max_iter(0), reg_param(0), rank(0), alpha(0))
+    var best_rmse = Double.MaxValue
     for( iter <- max_iter) {
       for ( param <- reg_param) {
         for ( r <- rank) {
           for ( a <- alpha) {
-            //val temp_output = output + "_" + iter + "_" + param + "_" + r + "_" + a
-            collaborativeFilter(spark, users_products_counts, products, num_users, iter, r, param, a, seed, output)
+            val rmse = collaborativeFilter(spark, users_products_counts, products, num_users, iter,
+              r, param, a, seed, output, resolve_output = false)
+            if(rmse < best_rmse) {
+              best_rmse = rmse
+              best_params = (iter, param, r, a)
+            }
           }
         }
       }
     }
 
+    collaborativeFilter(spark, users_products_counts, products, num_users, best_params._1,
+      best_params._3, best_params._2, best_params._4, seed, output, resolve_output = true)
   }
 
   def createNewALS(max_iter : Int, reg_param : Double, rank : Int, alpha : Double, num_users : Int, seed : Long): ALS = {
@@ -102,7 +110,7 @@ object CollaborativeFilteringRecommender {
       .setColdStartStrategy( "drop" )
   }
 
-  private def RMSE(model : ALSModel, test : Dataset[Row]): Unit = {
+  private def RMSE(model : ALSModel, test : Dataset[Row]): Double = {
     val predictions = model.transform( test )
 
     val evaluator = new RegressionEvaluator()
@@ -112,6 +120,7 @@ object CollaborativeFilteringRecommender {
 
     val rmse = evaluator.evaluate( predictions )
     println( "Root-mean-square-error = " + rmse )
+    rmse
   }
 
   private def topProductRecsPerUser(spark : SparkSession, model : ALSModel, users_products_counts : DataFrame, products : DataFrame, output : String): Unit = {
@@ -147,16 +156,19 @@ object CollaborativeFilteringRecommender {
   }
 
   def collaborativeFilter(spark: SparkSession, users_products_counts : DataFrame, products : DataFrame, num_users : Int,
-                          max_iter : Int, rank : Int, reg_param : Double, alpha : Double, seed : Long, output : String): Unit = {
+                          max_iter : Int, rank : Int, reg_param : Double, alpha : Double, seed : Long, output : String, resolve_output : Boolean):  Double = {
     val als = createNewALS(max_iter, reg_param, rank, alpha, num_users, seed)
 
     var Array(training, test) = users_products_counts.randomSplit( Array( 0.80, 0.20 ) )
 
     val model = als.fit( training )
-    RMSE(model, test)
+    val rmse = RMSE(model, test)
 
-    topProductRecsPerUser(spark, model, users_products_counts, products, output+"/originalProductsRecsPerUser/"+max_iter+"_"+rank+"_"+reg_param+"_"+alpha+"_"+seed)
+    if ( resolve_output )
+    {
+      topProductRecsPerUser(spark, model, users_products_counts, products, output+"/originalProductsRecsPerUser/"+max_iter+"_"+rank+"_"+reg_param+"_"+alpha+"_"+seed)
+    }
 
-
+    rmse
   }
 }
