@@ -32,7 +32,7 @@ object MostTimeOfDay {
     findMostCommonByHour(spark, orders, orders_products, products, output)
   }
 
-  def findMostCommonByHour(spark : SparkSession, str_orders : String, order_to_products : String, product_info : String, output : String): Unit = {
+    def findMostCommonByHour(spark : SparkSession, str_orders : String, order_to_products : String, product_info : String, output : String): Unit = {
     //load in all order data
     val orders = spark.read.format("csv").option("header", "true").load(str_orders)
     val order_products = spark.read.format("csv").option("header", "true").load(order_to_products)

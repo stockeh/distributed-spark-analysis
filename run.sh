@@ -5,13 +5,14 @@ OUT_DIR="/out"
 function usage {
 cat << EOF
 
-    Usage: $0 -[b | f | t | j | u] -[j | e | k] -c
+    Usage: $0 -[b | f | t | j | u | cfr] -[j | e | k] -c
 
     -b : Submit Basic Job
     -f : First Order Job
     -t : Top Food By Hour Job
     -j : Join Food Job
     -u : Sugar Orders Per User
+    -cfr : Collaborative Filtering Job
 
     -j : Jasons Profile
     -e : Evans Profile
@@ -51,7 +52,9 @@ case "$2" in
 -e|--evan)
     JAR_FILE="target/scala-2.11/cs455-spark_2.11-1.0.jar"
     CORE_HDFS="hdfs://juneau:4921"
-    CORE_SPARK="spark://lansing:25432"
+    #CORE_SPARK="spark://lansing:25432"
+    #CORE_SPARK="spark://salem:30136"
+    CORE_SPARK="yarn"
     INSTACART="cs455/food/instacart"
     USDA="cs455/food/usda"
     ;;
@@ -93,17 +96,17 @@ case "$1" in
 
 -t|--topbyhour)
     JOB_NAME="topfoodbyhour"
-	JOB_CLASS="cs455.spark.basic.MostTimeOfDay"
-	INPUT="${CORE_HDFS}/${INSTACART}/"
+    JOB_CLASS="cs455.spark.basic.MostTimeOfDay"
+    INPUT="${CORE_HDFS}/${INSTACART}/"
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
 
 -j|--joinedproducts)
-	JOB_NAME="joinedproducts"
-	JOB_CLASS="cs455.spark.basic.BestFoodMatch"
-	INPUT="${CORE_HDFS}/${INSTACART}/"
-	SECOND_INPUT="${CORE_HDFS}/${USDA}/"
+	  JOB_NAME="joinedproducts"
+	  JOB_CLASS="cs455.spark.basic.BestFoodMatch"
+	  INPUT="${CORE_HDFS}/${INSTACART}/"
+    SECOND_INPUT="${CORE_HDFS}/${USDA}/"
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
@@ -117,6 +120,14 @@ case "$1" in
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
+
+-cfr|--collabfilter)
+	  JOB_NAME="collaborativefilter"
+		JOB_CLASS="cs455.spark.basic.CollaborativeFilteringRecommender"
+		INPUT="${CORE_HDFS}/${INSTACART}/"
+		OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+		spark_runner
+		;;
     
 *) usage;
     ;;

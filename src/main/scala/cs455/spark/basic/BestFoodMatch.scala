@@ -1,5 +1,4 @@
 package cs455.spark.basic
-
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.SparkSession
@@ -50,12 +49,11 @@ class MatchTuple()
     var top = List( ( 0, ( 0, THRESHOLD ) ) )
 
     // output the values as ( insta-product-key , usda-product-key , top-jaccard-value )
-    val cartesian_result = instacart.cartesian( usda ).flatMap( row =>
+    var cartesian_result = instacart.cartesian( usda ).flatMap( row =>
     {
       val insta_product = row._1.get( 1 ).toString.toUpperCase.split(" ")
       val usda_product = row._2.get( 1 ).toString.toUpperCase.split(" ")
       val cart_val = jaccardIndex( insta_product, usda_product )
-
       val id = row._1.get( 0 ).toString.toInt
 
       // store highest jaccard value for current ID
@@ -82,6 +80,7 @@ class MatchTuple()
       else
         None
     })
+    cartesian_result = cartesian_result.reduceByKey((x,y) => if(x._2 > y._2) x else y)
 
     val reduced_cartesian = cartesian_result.reduceByKey( (a, b) => {
       if (a._2.toString.toDouble > b._2.toString.toDouble)
@@ -89,9 +88,7 @@ class MatchTuple()
       else
         b
     } )
-
-
-//    cartesian_result.foreach( println )
+    
     reduced_cartesian.saveAsTextFile( output )
   }
 }
