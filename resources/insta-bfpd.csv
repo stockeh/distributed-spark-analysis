@@ -1,4 +1,4 @@
-instacart_id,instacart_name,bfpd_id,bfpd_name,match_weight
+product_id,product_name,NDB_Number,long_name,match_weight
 1,Chocolate Sandwich Cookies,45004856,CHOCOLATE SANDWICH COOKIES,1.0
 2,All-Seasons Salt,45010378,SALT,0.5
 3,Robust Golden Unsweetened Oolong Tea,45238670,ORGANIC UNSWEETENED ROBUST GOLDEN OOLONG TEA,0.8333333333333334

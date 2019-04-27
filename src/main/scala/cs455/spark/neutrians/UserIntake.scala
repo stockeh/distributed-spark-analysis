@@ -10,12 +10,13 @@ import org.apache.spark.sql.SparkSession
   */
 object UserIntake {
 
-//  val ORDER_PROD_SET = "order_train.csv"
-  val ORDER_PROD_SET = "order_products__*.csv"
+  val ORDER_PROD_SET = "order_*.csv"
 
   val ORDERS = "orders.csv"
 
   val NUTRIENTS = "Nutrients.csv"
+
+  val PRODUCTS = "products.csv"
 
   /**
     * Entry point for the application
@@ -27,6 +28,7 @@ object UserIntake {
     val spark = SparkSession
       .builder
       .appName("UserIntake")
+        .master("local")
       .getOrCreate()
 
     val instacart = args(0)
@@ -77,15 +79,19 @@ object UserIntake {
       .join( linker, "product_id" ).join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" )
 
     // Reduce by user_id, and average the sugars for each user
-    val jointRDD = joint.rdd.map( row =>
-      {
-        ( row( 0 ), row( 1 ).toString.toDouble )
-      } ).groupByKey.mapValues( _.toList )
-      .map( x =>
-        {
-          x._1 + "," + x._2.sum / x._2.length
-        } )
+//    joint.rdd.map( row =>
+//    {
+//      ( row( 0 ), row( 1 ).toString.toDouble )
+//    } ).groupByKey.mapValues( _.toList )
+//    .map( x =>
+//      {
+//        x._1 + "," + x._2.sum / x._2.length
+//      } ).coalesce( 1 ).saveAsTextFile( output )
 
-    jointRDD.coalesce( 1 ).saveAsTextFile( output )
+    val products = spark.read.format( "csv" ).option( "header", "true" ).load( instacart + PRODUCTS )
+      .select( "product_id", "aisle_id" )
+
+    products.join( linker, "product_id" )
+      .join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" ).show(false)
   }
 }
