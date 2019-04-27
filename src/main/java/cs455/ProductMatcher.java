@@ -31,7 +31,6 @@ public class ProductMatcher {
 
             Match bestMatch = findBestMatch(product);
 
-
             printer.printRecord(product.id, product.name, bestMatch.bfpdProduct.id, bestMatch.bfpdProduct.name, bestMatch.matchWeight);
         }
         out.close();
@@ -61,7 +60,7 @@ public class ProductMatcher {
                 ++intersect;
         }
 
-        return 2 *(double) intersect / ( p1.words.size() + p2.words.size() );
+        return (double) intersect / ( p1.words.size() + p2.words.size() - intersect);
     }
 
     static void initBfpd() throws IOException {
