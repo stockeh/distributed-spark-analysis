@@ -117,6 +117,16 @@ case "$1" in
     OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
     spark_runner
     ;;
+
+-s|--similarusers)
+    JOB_NAME="similarusers"
+    JOB_CLASS="cs455.spark.basic.SimilarUsers"
+    INPUT="${CORE_HDFS}/${INSTACART}/"
+    SECOND_INPUT="${CORE_HDFS}/${USDA}/"
+    THIRD_INPUT="${CORE_HDFS}/${LINK}/"
+    OUTPUT="${CORE_HDFS}${OUT_DIR}/${JOB_NAME}"
+    spark_runner
+    ;;
     
 *) usage;
     ;;
