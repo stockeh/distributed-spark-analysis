@@ -1,8 +1,10 @@
 package cs455.spark.neutrians
 
-import org.apache.spark.sql.SparkSession
-
 import cs455.spark.util.Util
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 /**
   * Get the average amount of sugars in 100 gram measures on
@@ -30,7 +32,6 @@ object UserIntake {
     val spark = SparkSession
       .builder
       .appName("UserIntake")
-        .master("local")
       .getOrCreate()
 
     val instacart = args(0)
@@ -66,6 +67,15 @@ object UserIntake {
     val linker = spark.read.format( "csv" ).option( "header", "true" )
       .load( linked ).select( "product_id", "NDB_Number" )
 
+    val schema = StructType(Array(
+      StructField("product_id", IntegerType, nullable = true),
+      StructField("product_name", StringType, nullable = true),
+      StructField("aisle_id", IntegerType, nullable = true) ) )
+
+    val products = Util.filterByFoodAisles(spark,
+      spark.read.format( "csv" ).option( "header", "true" ).schema(schema)
+        .load( instacart + PRODUCTS ).select( "product_id", "aisle_id" ), instacart)
+
     // Format nutrients on NDB_Number and sugars
     val nutrients = spark.read.format( "csv" ).option( "header", "true" )
       .load( usda + NUTRIENTS ).drop("Nutrient_Code").rdd.flatMap( row =>
@@ -78,23 +88,23 @@ object UserIntake {
 
     // Join datasets to return < user_id, sugar >
     val joint = order_set.join( users, "order_id" ).drop( "order_id" )
-      .join( linker, "product_id" ).join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" )
+      .join( products, "product_id" )
+      .join( linker, "product_id" )
+      .join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" )
 
     // Reduce by user_id, and average the sugars for each user
-//    joint.rdd.map( row =>
-//    {
-//      ( row( 0 ), row( 1 ).toString.toDouble )
-//    } ).groupByKey.mapValues( _.toList )
-//    .map( x =>
-//      {
-//        x._1 + "," + x._2.sum / x._2.length
-//      } ).coalesce( 1 ).saveAsTextFile( output )
+    joint.rdd.map( row =>
+    {
+      ( row( 0 ), row( 1 ).toString.toDouble )
+    } ).groupByKey.mapValues( _.toList )
+    .map( x =>
+      {
+        x._1 + "," + x._2.sum / x._2.length
+      } ).coalesce( 1 ).saveAsTextFile( output )
 
-    val products = Util.filterByFoodAisles(spark,
-      spark.read.format( "csv" ).option( "header", "true" ).load( instacart + PRODUCTS )
-      .select( "product_id", "aisle_id" ), instacart).show(false)
-
-//    products.join( linker, "product_id" )
-//      .join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" ).show(false)
+    // Show mean sugar for all food products in instacart
+    products.join( linker, "product_id" )
+      .join( nutrients, "NDB_Number" ).drop( "NDB_Number", "product_id" )
+      .select( mean( $"sugar" ) ).show()
   }
 }
