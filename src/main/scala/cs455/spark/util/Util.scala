@@ -1,20 +1,20 @@
 package cs455.spark.util
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object Util {
 
-  def filterIDByColumn(spark : SparkSession, food_matches: DataFrame, exclude_deps: Array[Int], column_name : String, insta_location : String, filename : String): DataFrame = {
+  private def filterIDByColumn(spark : SparkSession, food_matches: DataFrame, exclude_deps: Array[Int],
+                       column_name : String, insta_location : String, filename : String): DataFrame = {
     val deps_file = insta_location + "/" + filename
     val departments = spark.read.format( "csv" ).option( "header", "true" ).load(deps_file)
     return food_matches.join(departments, column_name).filter(row => !exclude_deps.contains(row.getAs[Int](column_name)))
   }
 
-  def filterByFoodDepartments(spark : SparkSession, food_matches : DataFrame, insta_location : String): DataFrame = {
+  private def filterByFoodDepartments(spark : SparkSession, food_matches : DataFrame,
+                              insta_location : String): DataFrame = {
     val exclude_deps = Array(2, 8, 11, 17, 21)
-    return filterIDByColumn(spark, food_matches, exclude_deps, "department_id", insta_location, "departments.csv")
+    filterIDByColumn(spark, food_matches, exclude_deps, "department_id", insta_location, "departments.csv")
   }
 
   def filterByFoodAisles(spark : SparkSession, food_matches : DataFrame, insta_location : String): DataFrame = {
