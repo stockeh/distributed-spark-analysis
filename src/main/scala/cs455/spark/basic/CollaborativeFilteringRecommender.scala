@@ -2,11 +2,13 @@ package cs455.spark.basic
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.ml.evaluation.RegressionEvaluator
-import org.apache.spark.ml.recommendation.ALS
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types._
+import org.apache.spark.ml.recommendation.{ALS, ALSModel}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.apache.spark.sql.functions.explode
 import org.apache.spark.sql.functions.round
+
+import scala.Long
 
 //case class UserProduct(user_id : Int, product_id : Int, rating : Int)
 object CollaborativeFilteringRecommender {
@@ -33,50 +35,82 @@ object CollaborativeFilteringRecommender {
     .master( master )
     .getOrCreate()
 
-    recommend( spark, orders, orders_products, products, output )
+    tryCombos(spark, orders, orders_products, products, 2000, output)
+
   }
 
-  def recommend(spark : SparkSession, str_orders : String, str_orders_products : String, str_products : String, output : String): Unit = {
-
+  def setupUserProductCounts(spark : SparkSession, str_orders : String, str_orders_products : String, num_users : Int) : DataFrame = {
     var schema = StructType(Array(StructField("order_id", IntegerType, nullable = true), StructField("user_id", IntegerType, nullable = true)))
     var schema2 = StructType(Array(StructField("order_id", IntegerType, nullable = true), StructField("product_id", IntegerType, nullable = true)))
 
     val orders = spark.read.format("csv").option("header", "true").schema(schema).load(str_orders)
     val order_products = spark.read.format("csv").option("header", "true").schema(schema2).load(str_orders_products)
     import spark.implicits._
-
     //join orders datasets
     val orders_set = orders.join(order_products, Seq("order_id"))
 
-    val num_users = 2000
-    val max_iter = 6
-    val reg_param =   1.0
-    val rank = 50
-    val alpha = 1
-
-
-    val user_counts = orders_set.groupBy( "user_id" ).count()
-      .orderBy( $"count".desc ).limit( num_users ).withColumnRenamed( "count", "total_purchased" )
+    val user_counts = orders_set.groupBy( "user_id" ).count().orderBy("count").orderBy( $"count".desc ).limit( num_users ).withColumnRenamed( "count", "total_purchased" )
     val product_counts = orders_set.groupBy( "user_id", "product_id" ).count()
-    val users_products_counts = user_counts.join(product_counts, Seq( "user_id" ) )
+
+    user_counts.join(product_counts, Seq( "user_id" ) )
       .withColumn( "rating",$"count").drop( "count", "total_purchased" )
 
-    val als = new ALS()
+
+  }
+
+  def setupProducts(spark : SparkSession, str_products : String): DataFrame = {
+    val schema3 = StructType(Array(StructField("product_id", IntegerType, nullable = true), StructField("product_name", StringType, nullable = true)))
+    spark.read.format( "csv" ).option( "header", "true" ).schema( schema3 ).load( str_products )
+  }
+
+  def tryCombos(spark: SparkSession, str_orders : String, str_orders_products : String, str_products : String, num_users : Int, output : String): Unit = {
+    val products = setupProducts(spark, str_products)
+    val users_products_counts = setupUserProductCounts(spark, str_orders, str_orders_products, num_users)
+
+    val max_iter = Array(1)
+    val reg_param = Array(1.0)
+    val rank = Array(1)
+    val alpha = Array(1)
+    val seed = 12345L
+    originalProducts(spark, users_products_counts, products, output+"/topOriginalProductsPerUser/"+num_users)
+
+    var best_params = (max_iter(0), reg_param(0), rank(0), alpha(0))
+    var best_rmse = Double.MaxValue
+    for( iter <- max_iter) {
+      for ( param <- reg_param) {
+        for ( r <- rank) {
+          for ( a <- alpha) {
+            val rmse = collaborativeFilter(spark, users_products_counts, products, num_users, iter,
+              r, param, a, seed, output, resolve_output = false)
+            if(rmse < best_rmse) {
+              best_rmse = rmse
+              best_params = (iter, param, r, a)
+            }
+          }
+        }
+      }
+    }
+
+    collaborativeFilter(spark, users_products_counts, products, num_users, best_params._1,
+      best_params._3, best_params._2, best_params._4, seed, output, resolve_output = true)
+  }
+
+  def createNewALS(max_iter : Int, reg_param : Double, rank : Int, alpha : Double, num_users : Int, seed : Long): ALS = {
+    printf("Creating new ALS:\nTotal Products: %d\nMax Iterations: %d\nReg Param: %f\nRank: %d\nAlpha: %f\n", num_users, max_iter, reg_param, rank, alpha)
+    new ALS()
       .setMaxIter( max_iter )
       .setRegParam( reg_param )
       .setRank( rank )
-        .setAlpha(alpha)
+      .setAlpha(alpha)
+      .setSeed(seed)
       .setUserCol( "user_id" )
       .setItemCol( "product_id" )
       .setRatingCol( "rating" )
       .setImplicitPrefs(true)
       .setColdStartStrategy( "drop" )
+  }
 
-    printf("Total Products: %d\nMax Iterations: %d\nReg Param: %f\nRank: %d\nAlpha: %d\n", num_users, max_iter, reg_param, rank, alpha)
-
-    var Array(training, test) = users_products_counts.randomSplit( Array( 0.80, 0.20 ) )
-
-    val model = als.fit( training )
+  private def RMSE(model : ALSModel, test : Dataset[Row]): Double = {
     val predictions = model.transform( test )
 
     val evaluator = new RegressionEvaluator()
@@ -86,9 +120,13 @@ object CollaborativeFilteringRecommender {
 
     val rmse = evaluator.evaluate( predictions )
     println( "Root-mean-square-error = " + rmse )
+    rmse
+  }
+
+  private def topProductRecsPerUser(spark : SparkSession, model : ALSModel, users_products_counts : DataFrame, products : DataFrame, output : String): Unit = {
+    import spark.implicits._
 
     val topProductRecsPerUser = model.recommendForAllUsers( 400 )
-
     var topExploded = topProductRecsPerUser
       .select( $"user_id", explode( $"recommendations" ).alias( "recommendation" ) )
       .select( $"user_id", $"recommendation.*" )
@@ -96,30 +134,41 @@ object CollaborativeFilteringRecommender {
     topExploded = topExploded.join( users_products_counts.drop( "rating" ),
       Seq( "user_id", "product_id" ), "leftanti" )
 
-    val schema3 = StructType(Array(StructField("product_id", IntegerType, nullable = true), StructField("product_name", StringType, nullable = true)))
-    val products = spark.read.format( "csv" ).option( "header", "true" ).schema( schema3 ).load( str_products )
+    topExploded.join( products, Seq( "product_id" ), "inner" ).as[(Int,Int,Float,String)].rdd.map(row => {
+      (row._2,(row._1,row._3,row._4))
+    }).coalesce( 1 ).groupByKey.mapValues( x =>
+    {
+      x.toList.sortWith( _._2 > _ ._2 ).slice( 0, 10 )
+    } ).saveAsTextFile( output + "/topProductsRecsPerUser" )
+  }
 
-    val recommendation = topExploded.join( products, Seq( "product_id" ), "inner" ).rdd
-
-    recommendation.map( row =>
-      {
-        ( row.getAs[Int]( "user_id" ),
-        ( row.getAs[Int]( "product_id" ), row.getAs[String]( "product_name" ), row.getAs[Float]( "rating" ) ) )
-      } ).coalesce( 1 ).groupByKey.mapValues( x =>
-        {
-          x.toList.sortWith( _._3 > _ ._3 ).slice( 0, 10 )
-        } )
-      .saveAsTextFile( output + "/topProductsRecsPerUser" )
-
+  private def originalProducts(spark : SparkSession, users_products_counts : DataFrame, products : DataFrame, output : String) : Unit = {
     users_products_counts.join( products, Seq( "product_id" ), "inner" )
       .rdd.map( row =>
-        {
-          ( row.getAs[Int]( "user_id" ),
-          ( row.getAs[Int]( "product_id" ), row.getAs[String]( "product_name" ), row.getAs[Int]( "rating" ) ) )
-        } ).coalesce( 1 ).groupByKey.mapValues( x =>
-          {
-            x.toList.sortWith( _._3 > _ ._3 ).slice( 0, 10 )
-          } )
-          .saveAsTextFile( output+"/originalProductsRecsPerUser" )
+    {
+      ( row.getAs[Int]( "user_id" ),
+        ( row.getAs[Int]( "product_id" ), row.getAs[String]( "product_name" ), row.getAs[Long]( "rating" ) ) )
+    } ).coalesce( 1 ).groupByKey.mapValues( x =>
+    {
+      x.toList.sortWith( _._3 > _ ._3 ).slice( 0, 10 )
+    } )
+      .saveAsTextFile( output)
+  }
+
+  def collaborativeFilter(spark: SparkSession, users_products_counts : DataFrame, products : DataFrame, num_users : Int,
+                          max_iter : Int, rank : Int, reg_param : Double, alpha : Double, seed : Long, output : String, resolve_output : Boolean):  Double = {
+    val als = createNewALS(max_iter, reg_param, rank, alpha, num_users, seed)
+
+    var Array(training, test) = users_products_counts.randomSplit( Array( 0.80, 0.20 ) )
+
+    val model = als.fit( training )
+    val rmse = RMSE(model, test)
+
+    if ( resolve_output )
+    {
+      topProductRecsPerUser(spark, model, users_products_counts, products, output+"/originalProductsRecsPerUser/"+max_iter+"_"+rank+"_"+reg_param+"_"+alpha+"_"+seed)
+    }
+
+    rmse
   }
 }
