@@ -1,7 +1,7 @@
 # distributed-spark-analysis
 Using Apache Spark to Analyze the Instacart Dataset
 
-...
+Purchasing nutritional food products can be overwhelming when faced with the enormous amount of items available in grocery stores today. Through the rise of ecommerce and data collection, we can use data analytic methods to help consumers find healthy foods and make the best decisions for their diet. By leveraging data available from the online grocery delivery service, Instacart, and the United States Department of Agriculture, we were able to analyze the nutritional makeup of food products and recommend items to users based on their interests using machine learning techniques. Dietary and nutritional strategies of users were analyzed, recommendations were created with collaborative filtering, and food was broken down into its primary nutrients and explored via principal component analysis. Our findings indicate that Instacart users make relatively healthy choices, that matrix factorization is an effective approach to create user recommendations, and that categorizing foods by their nutrients opens the door for more research.
 
 ## Getting Started
 
