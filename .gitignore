@@ -7,7 +7,6 @@ out/
 build/
 .gradle/
 build.gradle
-build.sbt
 krun.sh
 
 /data
