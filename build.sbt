@@ -2,7 +2,7 @@ name := "cs455-spark"
 
 version := "1.0"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
 libraryDependencies ++= Seq(
 	"org.apache.commons" % "commons-csv" % "1.1",

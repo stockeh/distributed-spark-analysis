@@ -6,34 +6,34 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
-import org.apache.commons.csv.*;
+//import org.apache.commons.csv.*;
 
 public class ProductMatcher {
 
     static HashMap<String, ArrayList<Product>> productsMap = new HashMap<>();
 
     public static void main(String[] args) throws IOException {
-        initBfpd();
-        BufferedWriter out = new BufferedWriter(new FileWriter("/Users/keegan/insta-bfpd.csv"));
-        CSVPrinter printer = new CSVPrinter(out,
-                CSVFormat.DEFAULT.withHeader("instacart_id", "instacart_name", "bfpd_id", "bfpd_name", "match_weight"));
-
-        Reader in = new FileReader("/Users/keegan/instacart/products.csv");
-        Iterator<CSVRecord> it  = CSVFormat.DEFAULT.parse(in).iterator();
-        it.next();
-        while(it.hasNext()) {
-            CSVRecord record = it.next();
-            Product product = new Product();
-            product.id = Integer.parseInt(record.get(0));
-            product.name = record.get(1);
-            for(String word : product.name.split(" "))
-                product.words.add(word.toLowerCase());
-
-            Match bestMatch = findBestMatch(product);
-
-            printer.printRecord(product.id, product.name, bestMatch.bfpdProduct.id, bestMatch.bfpdProduct.name, bestMatch.matchWeight);
-        }
-        out.close();
+//        initBfpd();
+//        BufferedWriter out = new BufferedWriter(new FileWriter("/Users/keegan/insta-bfpd.csv"));
+//        CSVPrinter printer = new CSVPrinter(out,
+//                CSVFormat.DEFAULT.withHeader("instacart_id", "instacart_name", "bfpd_id", "bfpd_name", "match_weight"));
+//
+//        Reader in = new FileReader("/Users/keegan/instacart/products.csv");
+//        Iterator<CSVRecord> it  = CSVFormat.DEFAULT.parse(in).iterator();
+//        it.next();
+//        while(it.hasNext()) {
+//            CSVRecord record = it.next();
+//            Product product = new Product();
+//            product.id = Integer.parseInt(record.get(0));
+//            product.name = record.get(1);
+//            for(String word : product.name.split(" "))
+//                product.words.add(word.toLowerCase());
+//
+//            Match bestMatch = findBestMatch(product);
+//
+//            printer.printRecord(product.id, product.name, bestMatch.bfpdProduct.id, bestMatch.bfpdProduct.name, bestMatch.matchWeight);
+//        }
+//        out.close();
     }
 
     static Match findBestMatch(Product instaP) {
@@ -64,20 +64,20 @@ public class ProductMatcher {
     }
 
     static void initBfpd() throws IOException {
-        Reader bfpdIn = new FileReader("/Users/keegan/bfpd/Products.csv");
-        Iterator<CSVRecord> it  = CSVFormat.DEFAULT.parse(bfpdIn).iterator();
-        it.next();
-        while(it.hasNext()) {
-            CSVRecord record = it.next();
-            Product bfpdProduct = new Product();
-            bfpdProduct.id = Integer.parseInt(record.get(0));
-            bfpdProduct.name = record.get(1);
-            for(String word : bfpdProduct.name.split(" ")) {
-                String wordLower = word.toLowerCase();
-                bfpdProduct.words.add(wordLower);
-                addProduct(wordLower, bfpdProduct);
-            }
-        }
+//        Reader bfpdIn = new FileReader("/Users/keegan/bfpd/Products.csv");
+//        Iterator<CSVRecord> it  = CSVFormat.DEFAULT.parse(bfpdIn).iterator();
+//        it.next();
+//        while(it.hasNext()) {
+//            CSVRecord record = it.next();
+//            Product bfpdProduct = new Product();
+//            bfpdProduct.id = Integer.parseInt(record.get(0));
+//            bfpdProduct.name = record.get(1);
+//            for(String word : bfpdProduct.name.split(" ")) {
+//                String wordLower = word.toLowerCase();
+//                bfpdProduct.words.add(wordLower);
+//                addProduct(wordLower, bfpdProduct);
+//            }
+//        }
     }
 
     static void addProduct(String word, Product product) {
